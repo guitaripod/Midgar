@@ -6,6 +6,7 @@ struct ITunesLookupResponse: Decodable {
 
 struct ITunesApp: Decodable {
     let trackId: Int
+    let artistId: Int?
     let bundleId: String?
     let trackName: String?
     let primaryGenreName: String?

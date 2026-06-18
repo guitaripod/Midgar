@@ -3,7 +3,13 @@ import Foundation
 struct CatalogResponse: Codable {
     let version: Int
     let updatedAt: String?
+    let developer: CatalogDeveloper?
     let apps: [CatalogEntry]
+}
+
+struct CatalogDeveloper: Codable {
+    let name: String?
+    let artistId: String?
 }
 
 struct CatalogEntry: Codable {

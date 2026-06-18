@@ -1,7 +1,10 @@
 import UIKit
+import os
 
 /// Entry points for the Midgar in-app storefront.
 public enum Midgar {
+
+    private static let log = Logger(subsystem: "com.midgar.storefront", category: "Midgar")
 
     /// Returns the storefront wrapped in a navigation controller, ready to present or embed.
     @MainActor
@@ -15,11 +18,20 @@ public enum Midgar {
 
     /// Presents the storefront modally. Without an explicit presenter, the top-most view controller
     /// in the active scene is used — convenient from SwiftUI hosts and UIKit alike.
+    /// Returns `false` (and logs) when no presenter could be found; pass an explicit `presenter`
+    /// from custom-window hosts to guarantee presentation.
+    @discardableResult
     @MainActor
-    public static func present(from presenter: UIViewController? = nil, config: MidgarConfig = .default) {
+    public static func present(from presenter: UIViewController? = nil, config: MidgarConfig = .default) -> Bool {
+        guard let host = presenter ?? topViewController() else {
+            log.error("Midgar.present found no view controller to present from; pass an explicit presenter.")
+            assertionFailure("Midgar.present found no view controller to present from.")
+            return false
+        }
         let navigation = makeStoreViewController(config: config)
         navigation.modalPresentationStyle = .automatic
-        (presenter ?? topViewController())?.present(navigation, animated: true)
+        host.present(navigation, animated: true)
+        return true
     }
 
     @MainActor

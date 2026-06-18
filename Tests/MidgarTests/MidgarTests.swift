@@ -75,6 +75,29 @@ final class MidgarTests: XCTestCase {
         XCTAssertEqual(makeApp(id: "123").storeURL.absoluteString, "https://apps.apple.com/app/id123")
     }
 
+    func testBundledCatalogDeclaresDeveloperArtist() {
+        XCTAssertEqual(CatalogService.loadBundledResponse()?.developer?.artistId, "1484270247")
+    }
+
+    func testDeveloperGuardKeepsEntriesWithoutAnExpectationOrLiveData() {
+        XCTAssertTrue(CatalogService.belongsToDeveloper(makeEntry(), live: nil, expectedArtistID: nil))
+        XCTAssertTrue(CatalogService.belongsToDeveloper(makeEntry(), live: nil, expectedArtistID: "1484270247"))
+        XCTAssertTrue(CatalogService.belongsToDeveloper(makeEntry(), live: makeITunes(artistId: nil), expectedArtistID: "1484270247"))
+    }
+
+    func testDeveloperGuardKeepsMatchAndDropsMismatch() {
+        XCTAssertTrue(CatalogService.belongsToDeveloper(makeEntry(), live: makeITunes(artistId: 1484270247), expectedArtistID: "1484270247"))
+        XCTAssertFalse(CatalogService.belongsToDeveloper(makeEntry(), live: makeITunes(artistId: 999), expectedArtistID: "1484270247"))
+    }
+
+    private func makeEntry(appId: String = "1") -> CatalogEntry {
+        CatalogEntry(appId: appId, bundleId: "com.example.\(appId)", name: "X", tagline: nil, genre: nil, accent: nil, featured: nil, order: nil, icon: nil)
+    }
+
+    private func makeITunes(artistId: Int?) -> ITunesApp {
+        ITunesApp(trackId: 1, artistId: artistId, bundleId: nil, trackName: nil, primaryGenreName: nil, formattedPrice: nil, averageUserRating: nil, userRatingCount: nil, artworkUrl512: nil, artworkUrl100: nil, screenshotUrls: nil)
+    }
+
     private func makeApp(
         id: String = "1",
         featured: Bool = false,

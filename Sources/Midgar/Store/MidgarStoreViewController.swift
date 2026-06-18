@@ -12,6 +12,7 @@ public final class MidgarStoreViewController: UIViewController {
     private var apps: [MidgarApp] = []
     private var impressed = Set<String>()
     private var didLoad = false
+    private var isPresentingProduct = false
 
     private var collectionView: UICollectionView!
     private var dataSource: UICollectionViewDiffableDataSource<Int, MidgarApp>!
@@ -86,6 +87,7 @@ public final class MidgarStoreViewController: UIViewController {
     private func setupStateViews() {
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         activityIndicator.hidesWhenStopped = true
+        activityIndicator.color = config.resolvedAccent
         view.addSubview(activityIndicator)
 
         emptyView.isHidden = true
@@ -117,14 +119,19 @@ public final class MidgarStoreViewController: UIViewController {
 
     @MainActor
     private func refresh() async {
-        let fresh = await service.build(config: config)
+        let result = await service.build(config: config)
         refreshControl.endRefreshing()
         activityIndicator.stopAnimating()
-        if fresh.isEmpty {
-            if apps.isEmpty { emptyView.isHidden = false }
+        if result.apps.isEmpty {
+            if apps.isEmpty {
+                emptyView.isHidden = false
+                UIAccessibility.post(notification: .screenChanged, argument: emptyView)
+            }
+        } else if !result.enriched && !apps.isEmpty {
+            return
         } else {
             emptyView.isHidden = true
-            apply(fresh, animatingDifferences: !apps.isEmpty)
+            apply(result.apps, animatingDifferences: !apps.isEmpty)
         }
     }
 
@@ -144,6 +151,8 @@ public final class MidgarStoreViewController: UIViewController {
     }
 
     private func open(_ app: MidgarApp) {
+        guard !isPresentingProduct, presentedViewController == nil else { return }
+        isPresentingProduct = true
         telemetry.send(.tap, appId: app.appId)
         presentProduct(for: app)
     }
@@ -157,6 +166,7 @@ public final class MidgarStoreViewController: UIViewController {
             if success {
                 self.present(productViewController, animated: true)
             } else {
+                self.isPresentingProduct = false
                 UIApplication.shared.open(app.storeURL)
             }
         }
@@ -181,8 +191,9 @@ extension MidgarStoreViewController: UICollectionViewDelegate {
     }
 }
 
-extension MidgarStoreViewController: SKStoreProductViewControllerDelegate {
+extension MidgarStoreViewController: @MainActor SKStoreProductViewControllerDelegate {
     public func productViewControllerDidFinish(_ viewController: SKStoreProductViewController) {
+        isPresentingProduct = false
         viewController.dismiss(animated: true)
     }
 }

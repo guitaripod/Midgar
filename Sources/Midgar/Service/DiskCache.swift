@@ -24,12 +24,12 @@ struct DiskCache {
         encode(apps, to: snapshotURL)
     }
 
-    func loadCatalog() -> [CatalogEntry]? {
-        decode([CatalogEntry].self, from: catalogURL)
+    func loadCatalog() -> CatalogResponse? {
+        decode(CatalogResponse.self, from: catalogURL)
     }
 
-    func saveCatalog(_ entries: [CatalogEntry]) {
-        encode(entries, to: catalogURL)
+    func saveCatalog(_ catalog: CatalogResponse) {
+        encode(catalog, to: catalogURL)
     }
 
     private func decode<T: Decodable>(_ type: T.Type, from url: URL) -> T? {

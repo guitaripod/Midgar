@@ -11,6 +11,7 @@ final class EmptyStateView: UIView {
         let imageView = UIImageView(image: UIImage(systemName: "square.grid.2x2"))
         imageView.tintColor = .tertiaryLabel
         imageView.contentMode = .scaleAspectFit
+        imageView.isAccessibilityElement = false
         imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 42, weight: .light)
 
         let title = UILabel()

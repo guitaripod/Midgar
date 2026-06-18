@@ -19,47 +19,44 @@ actor CatalogService {
     }
 
     /// Builds the storefront fresh: pulls the curated catalog, enriches with live App Store data for
-    /// the user's region, applies exclusions, sorts, and persists the snapshot. Never throws —
-    /// always returns the best available data, falling back to the bundled catalog when offline.
-    func build(config: MidgarConfig) async -> [MidgarApp] {
+    /// the user's region, applies exclusions, sorts, and persists the snapshot **only when
+    /// enrichment succeeded** so an offline refresh can never clobber the rich cached snapshot.
+    /// `enriched` reports whether live App Store data was merged in.
+    func build(config: MidgarConfig) async -> (apps: [MidgarApp], enriched: Bool) {
         let exclusions = Set(config.resolvedExclusions)
-        let entries = await resolveEntries(config: config)
-            .filter { !exclusions.contains($0.bundleId.lowercased()) }
+        let catalog = await resolveCatalog(config: config)
+        let entries = catalog.apps.filter { !exclusions.contains($0.bundleId.lowercased()) }
+        guard !entries.isEmpty else { return ([], false) }
 
-        guard !entries.isEmpty else { return [] }
+        let live = await itunes.lookup(ids: entries.map(\.appId), storefront: config.resolvedStorefront)
+        let enriched = !live.isEmpty
+        let expectedArtistID = catalog.developer?.artistId
 
-        let live = await itunes.lookup(
-            ids: entries.map(\.appId),
-            storefront: config.resolvedStorefront
-        )
-
+        var seen = Set<String>()
         let apps = entries
+            .filter { Self.belongsToDeveloper($0, live: live[$0.appId], expectedArtistID: expectedArtistID) }
             .map { merge(entry: $0, live: live[$0.appId]) }
             .sorted(by: Self.ordering)
+            .filter { seen.insert($0.appId).inserted }
 
-        if !apps.isEmpty { cache.saveSnapshot(apps) }
-        return apps
+        if enriched, !apps.isEmpty { cache.saveSnapshot(apps) }
+        return (apps, enriched)
     }
 
-    private func resolveEntries(config: MidgarConfig) async -> [CatalogEntry] {
+    private func resolveCatalog(config: MidgarConfig) async -> CatalogResponse {
         if let remote = await fetchRemoteCatalog(config: config) {
             cache.saveCatalog(remote)
             return remote
         }
         if let disk = cache.loadCatalog() { return disk }
-        return Self.bundledCatalog()
+        return Self.loadBundledResponse() ?? CatalogResponse(version: 0, updatedAt: nil, developer: nil, apps: [])
     }
 
-    private func fetchRemoteCatalog(config: MidgarConfig) async -> [CatalogEntry]? {
-        var components = URLComponents(url: config.catalogURL, resolvingAgainstBaseURL: false)
-        components?.queryItems = [
-            URLQueryItem(name: "exclude", value: config.resolvedExclusions.joined(separator: ","))
-        ]
-        guard let url = components?.url else { return nil }
+    private func fetchRemoteCatalog(config: MidgarConfig) async -> CatalogResponse? {
         do {
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await session.data(from: config.catalogURL)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-            return try JSONDecoder().decode(CatalogResponse.self, from: data).apps
+            return try JSONDecoder().decode(CatalogResponse.self, from: data)
         } catch {
             return nil
         }
@@ -83,17 +80,29 @@ actor CatalogService {
         )
     }
 
+    /// Keeps an entry unless live App Store data proves it belongs to a *different* developer than
+    /// the catalog's. Entries without live data are always kept (preserving offline degradation),
+    /// so Midgar can only ever promote the catalog owner's own apps.
+    static func belongsToDeveloper(_ entry: CatalogEntry, live: ITunesApp?, expectedArtistID: String?) -> Bool {
+        guard let expectedArtistID, let artistID = live?.artistId else { return true }
+        return String(artistID) == expectedArtistID
+    }
+
     static func ordering(_ lhs: MidgarApp, _ rhs: MidgarApp) -> Bool {
         if lhs.featured != rhs.featured { return lhs.featured }
         if lhs.order != rhs.order { return lhs.order < rhs.order }
         return lhs.name < rhs.name
     }
 
-    static func bundledCatalog() -> [CatalogEntry] {
+    static func loadBundledResponse() -> CatalogResponse? {
         guard let url = Bundle.module.url(forResource: "catalog.fallback", withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let response = try? JSONDecoder().decode(CatalogResponse.self, from: data)
-        else { return [] }
-        return response.apps
+        else { return nil }
+        return response
+    }
+
+    static func bundledCatalog() -> [CatalogEntry] {
+        loadBundledResponse()?.apps ?? []
     }
 }

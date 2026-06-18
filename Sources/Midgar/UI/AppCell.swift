@@ -34,13 +34,11 @@ final class AppCell: UICollectionViewCell {
 
         featuredLabel.isHidden = !app.featured
         if app.featured {
+            let featuredFont = UIFontMetrics(forTextStyle: .caption2)
+                .scaledFont(for: .systemFont(ofSize: 11, weight: .heavy))
             featuredLabel.attributedText = NSAttributedString(
                 string: "FEATURED",
-                attributes: [
-                    .font: UIFont.systemFont(ofSize: 11, weight: .heavy),
-                    .foregroundColor: accent,
-                    .kern: 0.6,
-                ]
+                attributes: [.font: featuredFont, .foregroundColor: accent, .kern: 0.6]
             )
         }
 
@@ -54,9 +52,12 @@ final class AppCell: UICollectionViewCell {
         configuration.baseBackgroundColor = accent.withAlphaComponent(0.14)
         configuration.baseForegroundColor = accent
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16)
-        var buttonTitle = AttributedString(app.priceLabel.uppercased())
-        buttonTitle.font = UIFont.preferredFont(forTextStyle: .footnote).bold
-        configuration.attributedTitle = buttonTitle
+        configuration.title = app.priceLabel.uppercased()
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = UIFont.preferredFont(forTextStyle: .footnote).bold
+            return outgoing
+        }
         getButton.configuration = configuration
 
         if app.screenshotURLs.isEmpty {
@@ -94,6 +95,9 @@ final class AppCell: UICollectionViewCell {
         taglineLabel.numberOfLines = 2
 
         metaLabel.numberOfLines = 1
+        metaLabel.adjustsFontForContentSizeCategory = true
+        featuredLabel.adjustsFontForContentSizeCategory = true
+        getButton.titleLabel?.adjustsFontForContentSizeCategory = true
 
         let textStack = UIStackView(arrangedSubviews: [featuredLabel, titleLabel, taglineLabel, metaLabel])
         textStack.axis = .vertical

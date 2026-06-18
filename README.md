@@ -60,6 +60,18 @@ MidgarConfig(
 )
 ```
 
+## Telemetry & privacy
+
+Midgar reports **anonymous, aggregate** impression/tap counts per promoted app (no IDFA/IDFV, no user identifier, no cross-app linkage) so you can see which apps your cross-promotion drives. It ships a `PrivacyInfo.xcprivacy` declaring `Product Interaction` (not linked, not tracking, analytics purpose).
+
+Telemetry is on by default. Disable it per host app:
+
+```swift
+Midgar.present(from: self, config: MidgarConfig(enableTelemetry: false))
+```
+
+The package only ever promotes the catalog owner's own apps: the host app's own bundle id is auto-excluded, and any catalog entry whose live App Store `artistId` doesn't match the catalog's developer is dropped client-side.
+
 ## Catalog service
 
 The default catalog lives in [`worker/`](worker/) — a Cloudflare Worker exposing:
