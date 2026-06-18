@@ -15,7 +15,8 @@ end
 
 proj_path = ARGV[0]
 target_name = ARGV[1]
-url = 'https://github.com/guitaripod/Midgar'
+url = 'https://github.com/guitaripod/MidgarKit'
+product = 'MidgarKit'
 
 project = Xcodeproj::Project.open(proj_path)
 target = project.targets.find { |t| t.name == target_name }
@@ -27,22 +28,22 @@ end
 if pkg.nil?
   pkg = project.new(Xcodeproj::Project::Object::XCRemoteSwiftPackageReference)
   pkg.repositoryURL = url
-  pkg.requirement = { 'kind' => 'upToNextMajorVersion', 'minimumVersion' => '1.0.0' }
+  pkg.requirement = { 'kind' => 'upToNextMajorVersion', 'minimumVersion' => '2.0.0' }
   project.root_object.package_references << pkg
 end
 
-if target.package_product_dependencies.any? { |d| d.product_name == 'Midgar' }
-  puts "Midgar already linked in #{target_name}"
+if target.package_product_dependencies.any? { |d| d.product_name == product }
+  puts "#{product} already linked in #{target_name}"
 else
   dep = project.new(Xcodeproj::Project::Object::XCSwiftPackageProductDependency)
   dep.package = pkg
-  dep.product_name = 'Midgar'
+  dep.product_name = product
   target.package_product_dependencies << dep
 
   build_file = project.new(Xcodeproj::Project::Object::PBXBuildFile)
   build_file.product_ref = dep
   target.frameworks_build_phase.files << build_file
-  puts "linked Midgar into #{target_name}"
+  puts "linked #{product} into #{target_name}"
 end
 
 project.save
