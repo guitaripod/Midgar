@@ -22,4 +22,5 @@ struct CatalogEntry: Codable {
     let featured: Bool?
     let order: Int?
     let icon: URL?
+    let screenshots: [URL]?
 }

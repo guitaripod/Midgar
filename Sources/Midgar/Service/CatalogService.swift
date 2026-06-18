@@ -73,7 +73,7 @@ actor CatalogService {
             featured: entry.featured ?? false,
             order: entry.order ?? 999,
             iconURL: live?.artworkUrl512 ?? live?.artworkUrl100 ?? entry.icon,
-            screenshotURLs: live?.screenshotUrls ?? [],
+            screenshotURLs: Self.screenshots(entry: entry, live: live),
             rating: live?.averageUserRating,
             ratingCount: live?.userRatingCount,
             formattedPrice: live?.formattedPrice
@@ -86,6 +86,14 @@ actor CatalogService {
     static func belongsToDeveloper(_ entry: CatalogEntry, live: ITunesApp?, expectedArtistID: String?) -> Bool {
         guard let expectedArtistID, let artistID = live?.artistId else { return true }
         return String(artistID) == expectedArtistID
+    }
+
+    /// The legacy iTunes feed often omits screenshots, so prefer live iPhone shots, then the
+    /// catalog's curated (ASC-sourced) shots, then live iPad shots.
+    static func screenshots(entry: CatalogEntry, live: ITunesApp?) -> [URL] {
+        if let phone = live?.screenshotUrls, !phone.isEmpty { return phone }
+        if let curated = entry.screenshots, !curated.isEmpty { return curated }
+        return live?.ipadScreenshotUrls ?? []
     }
 
     static func ordering(_ lhs: MidgarApp, _ rhs: MidgarApp) -> Bool {

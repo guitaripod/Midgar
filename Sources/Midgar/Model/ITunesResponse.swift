@@ -16,4 +16,5 @@ struct ITunesApp: Decodable {
     let artworkUrl512: URL?
     let artworkUrl100: URL?
     let screenshotUrls: [URL]?
+    let ipadScreenshotUrls: [URL]?
 }

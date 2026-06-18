@@ -90,12 +90,24 @@ final class MidgarTests: XCTestCase {
         XCTAssertFalse(CatalogService.belongsToDeveloper(makeEntry(), live: makeITunes(artistId: 999), expectedArtistID: "1484270247"))
     }
 
-    private func makeEntry(appId: String = "1") -> CatalogEntry {
-        CatalogEntry(appId: appId, bundleId: "com.example.\(appId)", name: "X", tagline: nil, genre: nil, accent: nil, featured: nil, order: nil, icon: nil)
+    func testScreenshotsPreferLiveThenCatalogThenIpad() {
+        let phone = [URL(string: "https://x/p1")!]
+        let ipad = [URL(string: "https://x/ipad1")!]
+        let curated = [URL(string: "https://x/c1")!]
+        let entry = makeEntry(screenshots: curated)
+
+        XCTAssertEqual(CatalogService.screenshots(entry: entry, live: makeITunes(artistId: nil, phone: phone, ipad: ipad)), phone)
+        XCTAssertEqual(CatalogService.screenshots(entry: entry, live: makeITunes(artistId: nil, phone: [], ipad: ipad)), curated)
+        XCTAssertEqual(CatalogService.screenshots(entry: makeEntry(), live: makeITunes(artistId: nil, phone: [], ipad: ipad)), ipad)
+        XCTAssertEqual(CatalogService.screenshots(entry: makeEntry(), live: nil), [])
     }
 
-    private func makeITunes(artistId: Int?) -> ITunesApp {
-        ITunesApp(trackId: 1, artistId: artistId, bundleId: nil, trackName: nil, primaryGenreName: nil, formattedPrice: nil, averageUserRating: nil, userRatingCount: nil, artworkUrl512: nil, artworkUrl100: nil, screenshotUrls: nil)
+    private func makeEntry(appId: String = "1", screenshots: [URL]? = nil) -> CatalogEntry {
+        CatalogEntry(appId: appId, bundleId: "com.example.\(appId)", name: "X", tagline: nil, genre: nil, accent: nil, featured: nil, order: nil, icon: nil, screenshots: screenshots)
+    }
+
+    private func makeITunes(artistId: Int?, phone: [URL]? = nil, ipad: [URL]? = nil) -> ITunesApp {
+        ITunesApp(trackId: 1, artistId: artistId, bundleId: nil, trackName: nil, primaryGenreName: nil, formattedPrice: nil, averageUserRating: nil, userRatingCount: nil, artworkUrl512: nil, artworkUrl100: nil, screenshotUrls: phone, ipadScreenshotUrls: ipad)
     }
 
     private func makeApp(
