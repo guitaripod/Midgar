@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "midgar-catalog",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-01",
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    { "binding": "MIDGAR", "id": "21fa1edee455481d8edc6d98de362cf3" }
+  ]
+}
