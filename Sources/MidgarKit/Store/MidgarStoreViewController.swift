@@ -159,6 +159,10 @@ public final class MidgarStoreViewController: UIViewController {
     }
 
     private func presentProduct(for app: MidgarApp) {
+        #if os(visionOS)
+        isPresentingProduct = false
+        UIApplication.shared.open(app.storeURL)
+        #else
         let productViewController = SKStoreProductViewController()
         productViewController.delegate = self
         let parameters = [SKStoreProductParameterITunesItemIdentifier: app.appId]
@@ -171,6 +175,7 @@ public final class MidgarStoreViewController: UIViewController {
                 UIApplication.shared.open(app.storeURL)
             }
         }
+        #endif
     }
 
     private func registerImpression(_ app: MidgarApp) {
@@ -192,10 +197,12 @@ extension MidgarStoreViewController: UICollectionViewDelegate {
     }
 }
 
+#if !os(visionOS)
 extension MidgarStoreViewController: @MainActor SKStoreProductViewControllerDelegate {
     public func productViewControllerDidFinish(_ viewController: SKStoreProductViewController) {
         isPresentingProduct = false
         viewController.dismiss(animated: true)
     }
 }
+#endif
 #endif
