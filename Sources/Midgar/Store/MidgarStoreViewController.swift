@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 import StoreKit
 
@@ -197,3 +198,4 @@ extension MidgarStoreViewController: @MainActor SKStoreProductViewControllerDele
         viewController.dismiss(animated: true)
     }
 }
+#endif

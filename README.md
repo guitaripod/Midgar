@@ -2,7 +2,7 @@
 
 A beautiful, drop-in **in-app App Store** for cross-promoting your other apps. One line to embed; the catalog updates without an app release.
 
-- **UIKit, native, in-app.** A polished list with live icons, ratings, prices, and screenshots — installs happen inside your app via `SKStoreProductViewController`, users never leave.
+- **Native on every Apple platform.** UIKit on iOS / iPadOS / visionOS / Mac Catalyst, AppKit on native macOS, with thin SwiftUI wrappers (`MidgarStoreView`, `.midgarStore(isPresented:)`) for SwiftUI hosts. A polished list with live icons, ratings, prices, and screenshots — on iOS installs happen inside the app via `SKStoreProductViewController`; on macOS it opens the Mac App Store.
 - **Curated, always current.** A hosted catalog (Cloudflare Worker) decides which apps, in what order, with editorial taglines and featured flags. Every entry is enriched at runtime with live App Store data for the user's region.
 - **Resilient.** Last-good catalog and a fully-enriched snapshot are cached on disk; a bundled fallback ships in the package, so the store renders instantly and works offline.
 - **Self-aware.** The host app's own bundle id is excluded automatically — an app never advertises itself.
@@ -101,4 +101,4 @@ host app ──bundleId──▶ Worker /v1/catalog   (curated: ids, order, tagl
 
 ## Requirements
 
-iOS 16+ · Swift 5.9+
+iOS 16+ · macOS 13+ · visionOS 1+ · Swift 5.9+

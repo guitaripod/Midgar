@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Configuration for a Midgar in-app storefront.
 ///
@@ -12,7 +16,7 @@ public struct MidgarConfig: Sendable {
     public var endpoint: URL
 
     /// Tint applied to the navigation bar and the GET buttons. `nil` inherits the presenter's tint.
-    public var accent: UIColor?
+    public var accent: MidgarColor?
 
     /// Title shown at the top of the storefront.
     public var title: String
@@ -28,7 +32,7 @@ public struct MidgarConfig: Sendable {
 
     public init(
         endpoint: URL = MidgarConfig.defaultEndpoint,
-        accent: UIColor? = nil,
+        accent: MidgarColor? = nil,
         title: String = "More Apps",
         excludedBundleIDs: [String] = [],
         enableTelemetry: Bool = true,
@@ -65,5 +69,11 @@ extension MidgarConfig {
         return Locale.current.region?.identifier.lowercased()
     }
 
-    var resolvedAccent: UIColor { accent ?? .tintColor }
+    var resolvedAccent: MidgarColor {
+        #if canImport(UIKit)
+        return accent ?? .tintColor
+        #else
+        return accent ?? .controlAccentColor
+        #endif
+    }
 }

@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 
 /// A horizontally scrolling strip of app screenshots. Each thumbnail keeps a fixed height and sizes
@@ -73,3 +74,4 @@ final class ScreenshotStripView: UIView {
         }
     }
 }
+#endif

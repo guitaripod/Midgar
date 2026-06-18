@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 
 /// An image view that asynchronously loads remote artwork with an animated shimmer placeholder,
@@ -119,3 +120,4 @@ final class RemoteImageView: UIImageView {
         shimmerLayer.removeFromSuperlayer()
     }
 }
+#endif

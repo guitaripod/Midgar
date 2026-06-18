@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Midgar",
     defaultLocalization: "en",
-    platforms: [.iOS(.v16)],
+    platforms: [.iOS(.v16), .macOS(.v13), .visionOS(.v1)],
     products: [
         .library(name: "Midgar", targets: ["Midgar"])
     ],

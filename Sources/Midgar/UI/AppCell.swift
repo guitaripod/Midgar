@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 
 @MainActor
@@ -185,3 +186,4 @@ private extension UIFont {
         return UIFont(descriptor: descriptor, size: 0)
     }
 }
+#endif
