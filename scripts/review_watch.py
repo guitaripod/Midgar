@@ -23,27 +23,41 @@ IN_FLIGHT = {"WAITING_FOR_REVIEW", "IN_REVIEW", "PENDING_DEVELOPER_RELEASE", "PR
 REJECTED = {"REJECTED", "METADATA_REJECTED", "DEVELOPER_REJECTED", "INVALID_BINARY"}
 APPROVED = {"READY_FOR_SALE", "PENDING_DEVELOPER_RELEASE", "PENDING_APPLE_RELEASE"}
 
+TOK = jwt.encode({"iss": ISSUER, "iat": int(time.time()), "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
+                 open(P8).read(), algorithm="ES256", headers={"kid": KEY_ID})
+
 
 def get(path):
-    tok = jwt.encode({"iss": ISSUER, "iat": int(time.time()), "exp": int(time.time()) + 600, "aud": "appstoreconnect-v1"},
-                     open(P8).read(), algorithm="ES256", headers={"kid": KEY_ID})
-    req = urllib.request.Request("https://api.appstoreconnect.apple.com" + path, headers={"Authorization": "Bearer " + tok})
-    try:
-        return json.load(urllib.request.urlopen(req, timeout=30))
-    except urllib.error.HTTPError as e:
-        return {"_error": e.code}
+    """Returns parsed JSON, or None on a transient failure after retries. Fails fast."""
+    for attempt in range(2):
+        req = urllib.request.Request("https://api.appstoreconnect.apple.com" + path,
+                                     headers={"Authorization": "Bearer " + TOK})
+        try:
+            return json.load(urllib.request.urlopen(req, timeout=15))
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt < 1:
+                time.sleep(2); continue
+            return {"_error": e.code}
+        except Exception:
+            if attempt < 1:
+                time.sleep(2); continue
+            return None
+    return None
 
 
 def current_states():
-    states = {}
+    states, complete = {}, True
     for app_id, name, platforms in APPS:
         for plat in platforms:
             v = get(f"/v1/apps/{app_id}/appStoreVersions?filter[platform]={plat}&limit=1")
-            data = v.get("data", [])
+            if not isinstance(v, dict) or "data" not in v:
+                complete = False
+                continue
+            data = v["data"]
             if data:
                 a = data[0]["attributes"]
                 states[f"{name} [{plat}]"] = {"version": a.get("versionString"), "state": a.get("appStoreState")}
-    return states
+    return states, complete
 
 
 def load_prev():
@@ -55,17 +69,23 @@ def load_prev():
 
 def main():
     prev = load_prev()
-    cur = current_states()
+    cur, complete = current_states()
+
+    if not complete:
+        # Don't overwrite the good snapshot or diff against a partial read.
+        print(f"⚠ Incomplete read ({len(cur)}/11) — App Store Connect API errored on some apps. "
+              f"Keeping the previous snapshot; will reconcile next run.")
+        return
+
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     json.dump(cur, open(STATE_FILE, "w"), indent=2)
 
     changes, rejections = [], []
     for key, info in cur.items():
         old = prev.get(key, {}).get("state")
-        new = info["state"]
-        if old != new:
-            changes.append(f"  CHANGED  {key}  {info['version']}  {old or '(new)'} -> {new}")
-        if new in REJECTED:
+        if old != info["state"]:
+            changes.append(f"  CHANGED  {key}  {info['version']}  {old or '(new)'} -> {info['state']}")
+        if info["state"] in REJECTED:
             rejections.append(f"{key} ({info['version']})")
 
     print(f"=== MidgarKit submissions — {len(cur)} tracked ===")
@@ -73,11 +93,7 @@ def main():
         flag = "  <-- ACTION" if info["state"] in REJECTED else ("  ✓" if info["state"] in APPROVED else "")
         print(f"  {key:26} {info['version']:7} {info['state']}{flag}")
     print()
-    if changes:
-        print("CHANGES SINCE LAST CHECK:")
-        print("\n".join(changes))
-    else:
-        print("No changes since last check.")
+    print("CHANGES SINCE LAST CHECK:\n" + "\n".join(changes) if changes else "No changes since last check.")
     if rejections:
         print("\n⚠ REJECTED — needs resubmission:", ", ".join(rejections))
 
